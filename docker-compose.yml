@@ -1,0 +1,68 @@
+services:
+  express:
+    build:
+      context: ./Express-server
+      dockerfile: dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://toledo:123@mongo:27017/TallerMilca?authSource=admin
+      - PGHOST=postgres
+      - PGUSER=toledo_pg
+      - PGPASSWORD=123pg
+      - PGDATABASE=TallerMilcaPG
+      - PGPORT=5432
+    volumes:
+      - ./Express-server:/app
+      - /app/node_modules
+    command: sh -c "npm install && nodemon server.js"
+    depends_on:
+      - mongo
+      - postgres
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:6
+    container_name: mongodb_taller
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: toledo
+      MONGO_INITDB_ROOT_PASSWORD: "123"
+      MONGO_INITDB_DATABASE: TallerMilca
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_taller
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: toledo_pg
+      POSTGRES_PASSWORD: "123pg"
+      POSTGRES_DB: TallerMilcaPG
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./Express-server/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    restart: unless-stopped
+
+  react:
+    build:
+      context: ./ReactWithForm
+      dockerfile: dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ReactWithForm:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    depends_on:
+      - express
+
+volumes:
+  mongo-data:
+  pg-data:
